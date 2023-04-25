@@ -210,16 +210,18 @@ pub fn table(_attr: TokenStream, item: TokenStream) -> TokenStream {
                 #(pub #field_names: #field_types,)*
             }
             impl Insert {
-                pub fn exec(&self) {
-                    let req_ptr = format!("{}\0", wasmos::serde_json::to_string(&wasmos::serde_json::json!({
+                pub async fn exec(&self) {
+                    let s = wasmos::serde_json::json!({
                         "op": "insert",
                         "tbl": #t_name,
                         "row": self
-                    })).unwrap()).as_ptr();
-
-                    let res_ptr = unsafe { wasmos::sql::sql_dml(req_ptr) };
-                    let res_str = unsafe { std::ffi::CString::from_raw(res_ptr as _).into_string().unwrap() };
-                    wasmos::wasmosdbg!(res_str);
+                    });
+                    wasmos::tokio::task::spawn(async move {
+                        let req_ptr = format!("{}\0", wasmos::serde_json::to_string(&s).unwrap()).as_ptr();
+                        let res_ptr = unsafe { wasmos::sql::sql_dml(req_ptr) };
+                        let res_str = unsafe { std::ffi::CString::from_raw(res_ptr as _).into_string().unwrap() };
+                        wasmos::wdbg!(res_str);
+                    }).await;
                 }
             }
 
