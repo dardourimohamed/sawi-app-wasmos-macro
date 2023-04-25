@@ -221,7 +221,7 @@ pub fn table(_attr: TokenStream, item: TokenStream) -> TokenStream {
                         let res_ptr = unsafe { wasmos::sql::sql_dml(req_ptr) };
                         let res_str = unsafe { std::ffi::CString::from_raw(res_ptr as _).into_string().unwrap() };
                         wasmos::wdbg!(res_str);
-                    }).await;
+                    }).await.unwrap()
                 }
             }
 
