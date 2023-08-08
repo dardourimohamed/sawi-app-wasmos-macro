@@ -4,16 +4,35 @@ use proc_macro2::{Ident, Span};
 use quote::quote;
 use syn::{
     parse_macro_input, AngleBracketedGenericArguments, DeriveInput, Expr, ExprAssign, Field, Lit,
-    Type, TypePath, Visibility,
+    LitStr, Type, TypePath, Visibility,
 };
 use wasmos_types::sql::{DDLOp, FieldDDL, TableDDL, TableDDLOp};
 
 fn field_to_ddl(f: &Field) -> FieldDDL {
+    let rename = f.attrs.iter().find_map(|a| {
+        a.path()
+            .get_ident()
+            .map(|id| {
+                if ["from", "rename_from", "renamed_from"]
+                    .contains(&id.to_string().to_lowercase().as_str())
+                {
+                    Some(
+                        a.parse_args::<LitStr>()
+                            .expect("invalid source column name")
+                            .value(),
+                    )
+                } else {
+                    None
+                }
+            })
+            .unwrap_or(None)
+    });
+
     let optional;
-    let ty = match &f.ty {
+    let r_ty = match &f.ty {
         syn::Type::Path(p) => {
             let last_p = &p.path.segments.last().unwrap();
-            match if last_p.ident.to_string() == "Option" {
+            if last_p.ident.to_string() == "Option" {
                 optional = true;
                 match &last_p.arguments {
                     syn::PathArguments::AngleBracketed(AngleBracketedGenericArguments {
@@ -31,22 +50,80 @@ fn field_to_ddl(f: &Field) -> FieldDDL {
                 optional = false;
                 last_p.ident.to_string()
             }
-            .as_str()
-            {
-                "bool" => "BOOLEAN",
-                "i8" => "TINYINT",
-                "i16" => "SMALLINT",
-                "i32" => "INT",
-                "i64" => "BIGINT",
-                "f32" => "FLOAT",
-                "f64" => "DOUBLE",
-                "String" => "VARCHAR(65535)",
-                t => panic!("unsupported type '{}'", t),
-            }
-            .to_string()
         }
         _ => panic!("unsupported type"),
     };
+
+    let ty = match r_ty.as_str() {
+        "bool" => "BOOLEAN",
+        "i8" => "TINYINT",
+        "i16" => "SMALLINT",
+        "i32" => "INT",
+        "i64" => "BIGINT",
+        "f32" => "FLOAT",
+        "f64" => "DOUBLE",
+        "char" => "VARCHAR(1)",
+        "str" => "VARCHAR(65535)",
+        "String" => "VARCHAR(65535)",
+        t => panic!("unsupported type '{}'", t),
+    }
+    .to_string();
+
+    // let default: Option<Value> = f.attrs.iter().find_map(|a| {
+    //     a.path().get_ident().and_then(|id| {
+    //         if ["default", "default_value"].contains(&id.to_string().as_str()) {
+    //             let r = a
+    //                 .parse_args::<LitStr>()
+    //                 .map(|s| {
+    //                     if !["str", "String"].contains(&r_ty.as_str()) {
+    //                         panic!("default value of type string literal should only be used on fields of type: 'str' or 'String'")
+    //                     };
+    //                     Some(Value::from(s.value()))
+    //                 })
+    //                 .or_else(|_| {
+    //                     a.parse_args::<LitFloat>()
+    //                         .map(|i| {
+    //                             if !["f32", "f64"].contains(&r_ty.as_str()) {
+    //                                 panic!("default value of type float should only be used on fields of type: 'f32' or 'f64'")
+    //                             };
+    //                             Some(Value::from(from_str::<f64>(i.base10_digits()).unwrap()))
+    //                         })
+    //                         .or_else(|_| {
+    //                             a.parse_args::<LitInt>()
+    //                                 .map(|i| {
+    //                                     if !["i8", "i16", "i32", "i64"].contains(&r_ty.as_str()) {
+    //                                         panic!("default value of type int should only be used on fields of type: 'i8', 'i16', 'i32' or 'i64'")
+    //                                     };
+    //                                     Some(Value::from(
+    //                                         from_str::<i64>(i.base10_digits()).unwrap(),
+    //                                     ))
+    //                                 })
+    //                                 .or_else(|_| {
+    //                                     a.parse_args::<LitChar>()
+    //                                         .map(|i| {
+    //                                             if !["char"].contains(&r_ty.as_str()) {
+    //                                                 panic!("default value of type char should only be used on fields of type: 'char'")
+    //                                             };
+    //                                             Some(Value::from(i.value().to_string()))})
+    //                                         .or_else(|_| {
+    //                                             a.parse_args::<LitBool>()
+    //                                                 .map(|i| {
+    //                                                     if !["bool"].contains(&r_ty.as_str()) {
+    //                                                         panic!("default value of type bool should only be used on fields of type: 'bool'")
+    //                                                     };
+    //                                                     Some(Value::from(i.value()))
+    //                                                 })
+    //                                         })
+    //                                 })
+    //                         })
+    //                 }).map_err(|_| a.parse_args::<Path>().unwrap().get_ident().unwrap().to_string()).expect("invalid default value");
+    //             r
+    //         } else {
+    //             None
+    //         }
+    //     })
+    // });
+
     FieldDDL {
         name: f
             .ident
@@ -55,7 +132,8 @@ fn field_to_ddl(f: &Field) -> FieldDDL {
             .to_string(),
         opt: optional,
         ty: ty,
-        op: DDLOp::Keep,
+        default: None,
+        op: rename.map_or(DDLOp::Keep, |n| DDLOp::Rename(n)),
     }
 }
 
@@ -298,6 +376,44 @@ pub fn table(attr: TokenStream, item: TokenStream) -> TokenStream {
                         });
                         let _ = wasmos::sql::sql_exec(s).await;
                     }
+                }
+
+                pub mod Update {
+
+                    #[derive(wasmos::serde::Serialize, Debug)]
+                    pub struct SQLFilter(wasmos::sql::FilterItem);
+                    impl wasmos::sql::SQLFilterTrait for SQLFilter {
+                        fn get_filter(&self) -> wasmos::sql::FilterItem {
+                            self.0.clone()
+                        }
+                    }
+
+                    #[derive(Debug)]
+                    pub struct UpdateOperation {
+                        values: std::collections::HashMap<String, serde_json::Value>,
+                        filter: Option<wasmos::sql::FilterStmt<SQLFilter>>,
+                    }
+                    impl UpdateOperation {
+                        #(
+                            pub fn #field_names(self, value: #field_types) -> UpdateOperation {
+                                let mut values = self.values;
+                                values.insert(#field_names_str.to_string(), wasmos::serde_json::to_value(value).unwrap());
+                                UpdateOperation {
+                                    values,
+                                    filter: self.filter
+                                }
+                            }
+                        )*
+                    }
+
+                    #(
+                        pub fn #field_names(value: #field_types) -> UpdateOperation {
+                            UpdateOperation {
+                                values: std::collections::HashMap::from([(#field_names_str.to_string(), wasmos::serde_json::to_value(value).unwrap())]),
+                                filter: None
+                            }
+                        }
+                    )*
                 }
 
                 #[no_mangle]
