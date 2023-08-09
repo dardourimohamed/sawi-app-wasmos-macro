@@ -464,6 +464,77 @@ pub fn table(attr: TokenStream, item: TokenStream) -> TokenStream {
                     )*
                 }
 
+                pub mod Delete {
+
+                    pub struct Delete(wasmos::sql::Delete<super::SQLFilter>);
+                    impl Delete {
+                        pub fn and(self, filter: super::SQLFilter) -> Self {
+                            Self(wasmos::sql::Delete {
+                                filter: Some(match self.0.filter {
+                                    Some(ex_filter) => ex_filter.and(filter),
+                                    _ => wasmos::sql::FilterStmt::Filter(filter),
+                                }),
+                                ..self.0
+                            })
+                        }
+                        pub fn and_all<VEC>(self, filter: VEC) -> Self
+                        where
+                            VEC: IntoIterator<Item = super::SQLFilter>,
+                        {
+                            Self(wasmos::sql::Delete {
+                                filter: Some(match self.0.filter {
+                                    Some(ex_filter) => ex_filter.and_all::<VEC>(filter),
+                                    _ => wasmos::sql::FilterStmt::And(
+                                        filter
+                                            .into_iter()
+                                            .map(|item| wasmos::sql::FilterStmt::Filter(item))
+                                            .collect(),
+                                    ),
+                                }),
+                                ..self.0
+                            })
+                        }
+                        pub fn or_any<VEC>(self, filter: VEC) -> Self
+                        where
+                            VEC: IntoIterator<Item = super::SQLFilter>,
+                        {
+                            Self(wasmos::sql::Delete {
+                                filter: Some(match self.0.filter {
+                                    Some(ex_filter) => ex_filter.or_any::<VEC>(filter),
+                                    _ => wasmos::sql::FilterStmt::Or(
+                                        filter
+                                            .into_iter()
+                                            .map(|item| wasmos::sql::FilterStmt::Filter(item))
+                                            .collect(),
+                                    ),
+                                }),
+                                ..self.0
+                            })
+                        }
+
+                        pub async fn exec(&self) {
+                            let s = wasmos::serde_json::json!(self.0);
+                            let _ = wasmos::sql::sql_exec(s).await;
+                        }
+                    }
+
+                    pub fn where_(filter: super::SQLFilter) -> Delete {
+                        Delete(wasmos::sql::Delete {
+                            op: Some("Delete".to_string()),
+                            tbl: #t_name.to_string(),
+                            filter: Some(wasmos::sql::FilterStmt::Filter(filter))
+                        })
+                    }
+
+                    pub fn all_rows() -> Delete {
+                        Delete(wasmos::sql::Delete {
+                            op: Some("Delete".to_string()),
+                            tbl: #t_name.to_string(),
+                            filter: None
+                        })
+                    }
+                }
+
                 #[no_mangle]
                 extern "C" fn #ddl_name() -> *const u8 {
                     #ddl.as_ptr()
