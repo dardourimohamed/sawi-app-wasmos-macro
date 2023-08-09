@@ -21,14 +21,14 @@ pub fn select_from(attr: TokenStream, item: TokenStream) -> TokenStream {
     let f_names = idents.iter().map(|f| f.to_string());
 
     TokenStream::from(quote!(
-        #[derive(wasmos::serde::Deserialize)]
+        #[derive(riwaq::serde::Deserialize)]
         #input
         impl #table_p::SelectTypeValidator for #id {
             #(fn #idents(_: #types) {})*
         }
 
-        #[derive(wasmos::serde::Serialize)]
-        pub struct #impl_id(wasmos::sql::Select<#table_p::SQLFilter>);
+        #[derive(riwaq::serde::Serialize)]
+        pub struct #impl_id(riwaq::sql::Select<#table_p::SQLFilter>);
         impl std::fmt::Debug for #impl_id {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 f.write_str(&format!("{}", self.0))
@@ -37,10 +37,10 @@ pub fn select_from(attr: TokenStream, item: TokenStream) -> TokenStream {
         impl #impl_id {
             pub fn and(self, filter: #table_p::SQLFilter) -> Self {
                 Self (
-                    wasmos::sql::Select {
+                    riwaq::sql::Select {
                         filter: Some(match self.0.filter {
                             Some(ex_filter) => ex_filter.and(filter),
-                            _ => wasmos::sql::FilterStmt::Filter(filter),
+                            _ => riwaq::sql::FilterStmt::Filter(filter),
                         }),
                         ..self.0
                     }
@@ -51,13 +51,13 @@ pub fn select_from(attr: TokenStream, item: TokenStream) -> TokenStream {
                 VEC: IntoIterator<Item = #table_p::SQLFilter>,
             {
                 Self (
-                    wasmos::sql::Select {
+                    riwaq::sql::Select {
                         filter: Some(match self.0.filter {
                             Some(ex_filter) => ex_filter.and_all::<VEC>(filter),
-                            _ => wasmos::sql::FilterStmt::And(
+                            _ => riwaq::sql::FilterStmt::And(
                                 filter
                                     .into_iter()
-                                    .map(|item| wasmos::sql::FilterStmt::Filter(item))
+                                    .map(|item| riwaq::sql::FilterStmt::Filter(item))
                                     .collect(),
                             ),
                         }),
@@ -70,10 +70,10 @@ pub fn select_from(attr: TokenStream, item: TokenStream) -> TokenStream {
             }
             pub fn or(self, filter: #table_p::SQLFilter) -> Self {
                 Self (
-                    wasmos::sql::Select {
+                    riwaq::sql::Select {
                         filter: Some(match self.0.filter {
                             Some(ex_filter) => ex_filter.or(filter),
-                            _ => wasmos::sql::FilterStmt::Filter(filter),
+                            _ => riwaq::sql::FilterStmt::Filter(filter),
                         }),
                         ..self.0
                     }
@@ -84,13 +84,13 @@ pub fn select_from(attr: TokenStream, item: TokenStream) -> TokenStream {
                 VEC: IntoIterator<Item = #table_p::SQLFilter>,
             {
                 Self (
-                    wasmos::sql::Select {
+                    riwaq::sql::Select {
                         filter: Some(match self.0.filter {
                             Some(ex_filter) => ex_filter.or_any::<VEC>(filter),
-                            _ => wasmos::sql::FilterStmt::Or(
+                            _ => riwaq::sql::FilterStmt::Or(
                                 filter
                                     .into_iter()
-                                    .map(|item| wasmos::sql::FilterStmt::Filter(item))
+                                    .map(|item| riwaq::sql::FilterStmt::Filter(item))
                                     .collect(),
                             ),
                         }),
@@ -100,16 +100,16 @@ pub fn select_from(attr: TokenStream, item: TokenStream) -> TokenStream {
             }
 
             pub async fn exec(&self) -> Result<Vec<#id>, String> {
-                wasmos::sql::sql_query(
-                    wasmos::serde_json::to_value(&self).unwrap()
+                riwaq::sql::sql_query(
+                    riwaq::serde_json::to_value(&self).unwrap()
                 ).await
-                .map(|res| wasmos::serde_json::from_value::<Vec<#id>>(res).unwrap())
+                .map(|res| riwaq::serde_json::from_value::<Vec<#id>>(res).unwrap())
             }
         }
 
         impl #id {
             pub fn find() -> #impl_id {
-                #impl_id(wasmos::sql::Select {
+                #impl_id(riwaq::sql::Select {
                     op: Some("Select".to_string()),
                     tbl: #table_p::T_NAME.to_string(),
                     cols: vec![#(#f_names.to_string() ,)*],

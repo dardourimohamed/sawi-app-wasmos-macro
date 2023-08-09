@@ -12,15 +12,15 @@ pub fn db_init(_attr: TokenStream, item: TokenStream) -> TokenStream {
 
     TokenStream::from(quote! {
         #[no_mangle]
-        extern "C" fn wasmos_settings_db_conn() -> *const u8 {
-            wasmos::tokio::runtime::Builder::new_current_thread()
+        extern "C" fn riwaq_settings_db_conn() -> *const u8 {
+            riwaq::tokio::runtime::Builder::new_current_thread()
                 .build()
                 .unwrap()
                 .block_on(async {
-                    let res: wasmos::sql::DBConn = {
+                    let res: riwaq::sql::DBConn = {
                         #(#body)*
                     };
-                    format!("{}\0", wasmos::serde_json::to_string(&res).unwrap()).as_ptr()
+                    format!("{}\0", riwaq::serde_json::to_string(&res).unwrap()).as_ptr()
                 })
         }
     })

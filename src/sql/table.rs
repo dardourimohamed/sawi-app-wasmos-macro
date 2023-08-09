@@ -6,7 +6,7 @@ use syn::{
     parse_macro_input, AngleBracketedGenericArguments, DeriveInput, Expr, ExprAssign, Field, Lit,
     LitStr, Type, TypePath, Visibility,
 };
-use wasmos_types::sql::{DDLOp, FieldDDL, TableDDL, TableDDLOp};
+use riwaq_types::sql::{DDLOp, FieldDDL, TableDDL, TableDDLOp};
 
 fn field_to_ddl(f: &Field) -> FieldDDL {
     let rename = f.attrs.iter().find_map(|a| {
@@ -248,7 +248,7 @@ pub fn table(attr: TokenStream, item: TokenStream) -> TokenStream {
     );
 
     let ddl_name = Ident::new(
-        format!("wasmos_table_ddl_{}", t_name).as_str(),
+        format!("riwaq_table_ddl_{}", t_name).as_str(),
         Span::call_site(),
     );
 
@@ -271,15 +271,15 @@ pub fn table(attr: TokenStream, item: TokenStream) -> TokenStream {
                     #(fn #field_names(_: #field_types) {} )*
                 }
 
-                #[wasmos::select_from(super::#struct_name)]
+                #[riwaq::select_from(super::#struct_name)]
                 pub struct SelectAll {
                     #(pub #field_names: #field_types,)*
                 }
 
-                #[derive(wasmos::serde::Serialize)]
-                pub struct SQLFilter(wasmos::sql::FilterItem);
-                impl wasmos::sql::SQLFilterTrait for SQLFilter {
-                    fn get_filter(&self) -> wasmos::sql::FilterItem {
+                #[derive(riwaq::serde::Serialize)]
+                pub struct SQLFilter(riwaq::sql::FilterItem);
+                impl riwaq::sql::SQLFilterTrait for SQLFilter {
+                    fn get_filter(&self) -> riwaq::sql::FilterItem {
                         self.0.clone()
                     }
                 }
@@ -287,103 +287,103 @@ pub fn table(attr: TokenStream, item: TokenStream) -> TokenStream {
                 #(
                     pub mod #cols {
                         pub fn eq(value: #field_types) -> super::SQLFilter {
-                            super::SQLFilter(wasmos::sql::FilterItem::Eq{
+                            super::SQLFilter(riwaq::sql::FilterItem::Eq{
                                 col: #field_names_str.to_string(),
-                                value: wasmos::serde_json::to_value(value).unwrap()
+                                value: riwaq::serde_json::to_value(value).unwrap()
                             })
                         }
                         pub fn ne(value: #field_types) -> super::SQLFilter {
-                            super::SQLFilter(wasmos::sql::FilterItem::Ne{
+                            super::SQLFilter(riwaq::sql::FilterItem::Ne{
                                 col: #field_names_str.to_string(),
-                                value: wasmos::serde_json::to_value(value).unwrap()
+                                value: riwaq::serde_json::to_value(value).unwrap()
                             })
                         }
                         pub fn in_<VEC>(values: VEC) -> super::SQLFilter where VEC: IntoIterator<Item = #field_types> {
-                            super::SQLFilter(wasmos::sql::FilterItem::In{
+                            super::SQLFilter(riwaq::sql::FilterItem::In{
                                 col: #field_names_str.to_string(),
-                                values: values.into_iter().map(|v| wasmos::serde_json::to_value(v).unwrap()).collect::<Vec<wasmos::serde_json::Value>>()
+                                values: values.into_iter().map(|v| riwaq::serde_json::to_value(v).unwrap()).collect::<Vec<riwaq::serde_json::Value>>()
                             })
                         }
                         pub fn nin<VEC>(values: VEC) -> super::SQLFilter where VEC: IntoIterator<Item = #field_types> {
-                            super::SQLFilter(wasmos::sql::FilterItem::Nin{
+                            super::SQLFilter(riwaq::sql::FilterItem::Nin{
                                 col: #field_names_str.to_string(),
-                                values: values.into_iter().map(|v| wasmos::serde_json::to_value(v).unwrap()).collect::<Vec<wasmos::serde_json::Value>>()
+                                values: values.into_iter().map(|v| riwaq::serde_json::to_value(v).unwrap()).collect::<Vec<riwaq::serde_json::Value>>()
                             })
                         }
                         pub fn gt(value: #field_types) -> super::SQLFilter {
-                            super::SQLFilter(wasmos::sql::FilterItem::Gt{
+                            super::SQLFilter(riwaq::sql::FilterItem::Gt{
                                 col: #field_names_str.to_string(),
-                                value: wasmos::serde_json::to_value(value).unwrap()
+                                value: riwaq::serde_json::to_value(value).unwrap()
                             })
                         }
                         pub fn gte(value: #field_types) -> super::SQLFilter {
-                            super::SQLFilter(wasmos::sql::FilterItem::Gte{
+                            super::SQLFilter(riwaq::sql::FilterItem::Gte{
                                 col: #field_names_str.to_string(),
-                                value: wasmos::serde_json::to_value(value).unwrap()
+                                value: riwaq::serde_json::to_value(value).unwrap()
                             })
                         }
                         pub fn lt(value: #field_types) -> super::SQLFilter {
-                            super::SQLFilter(wasmos::sql::FilterItem::Lt{
+                            super::SQLFilter(riwaq::sql::FilterItem::Lt{
                                 col: #field_names_str.to_string(),
-                                value: wasmos::serde_json::to_value(value).unwrap()
+                                value: riwaq::serde_json::to_value(value).unwrap()
                             })
                         }
                         pub fn lte(value: #field_types) -> super::SQLFilter {
-                            super::SQLFilter(wasmos::sql::FilterItem::Lte{
+                            super::SQLFilter(riwaq::sql::FilterItem::Lte{
                                 col: #field_names_str.to_string(),
-                                value: wasmos::serde_json::to_value(value).unwrap()
+                                value: riwaq::serde_json::to_value(value).unwrap()
                             })
                         }
                         pub fn between(start: #field_types, end: #field_types) -> super::SQLFilter {
-                            super::SQLFilter(wasmos::sql::FilterItem::Between{
+                            super::SQLFilter(riwaq::sql::FilterItem::Between{
                                 col: #field_names_str.to_string(),
-                                start: wasmos::serde_json::to_value(start).unwrap(),
-                                end: wasmos::serde_json::to_value(end).unwrap()
+                                start: riwaq::serde_json::to_value(start).unwrap(),
+                                end: riwaq::serde_json::to_value(end).unwrap()
                             })
                         }
                         pub fn like(expr: String) -> super::SQLFilter {
-                            super::SQLFilter(wasmos::sql::FilterItem::Like{
+                            super::SQLFilter(riwaq::sql::FilterItem::Like{
                                 col: #field_names_str.to_string(),
                                 expr: expr
                             })
                         }
                         pub fn is_null() -> super::SQLFilter {
-                            super::SQLFilter(wasmos::sql::FilterItem::IsNull{
+                            super::SQLFilter(riwaq::sql::FilterItem::IsNull{
                                 col: #field_names_str.to_string()
                             })
                         }
                         pub fn is_not_null() -> super::SQLFilter {
-                            super::SQLFilter(wasmos::sql::FilterItem::IsNotNull{
+                            super::SQLFilter(riwaq::sql::FilterItem::IsNotNull{
                                 col: #field_names_str.to_string()
                             })
                         }
                     }
                 )*
 
-                #[derive(wasmos::serde::Serialize)]
+                #[derive(riwaq::serde::Serialize)]
                 pub struct Insert {
                     #(pub #field_names: #field_types,)*
                 }
                 impl Insert {
                     pub async fn exec(&self) -> Result<i64, String> {
-                        let s = wasmos::serde_json::json!(wasmos::sql::Insert {
+                        let s = riwaq::serde_json::json!(riwaq::sql::Insert {
                             op: Some("Insert".to_string()),
                             tbl: #t_name.to_string(),
-                            values: wasmos::serde_json::to_value(self).unwrap()
+                            values: riwaq::serde_json::to_value(self).unwrap()
                         });
-                        wasmos::sql::sql_exec(s).await
+                        riwaq::sql::sql_exec(s).await
                     }
                 }
 
                 pub mod Update {
 
-                    pub struct Update(wasmos::sql::Update<super::SQLFilter>);
+                    pub struct Update(riwaq::sql::Update<super::SQLFilter>);
                     impl Update {
                         #(
                             pub fn #field_names(self, value: #field_types) -> Update {
                                 let mut values = self.0.values;
-                                values.insert(#field_names_str.to_string(), wasmos::serde_json::to_value(value).unwrap());
-                                Update(wasmos::sql::Update {
+                                values.insert(#field_names_str.to_string(), riwaq::serde_json::to_value(value).unwrap());
+                                Update(riwaq::sql::Update {
                                     values,
                                     ..self.0
                                 })
@@ -391,10 +391,10 @@ pub fn table(attr: TokenStream, item: TokenStream) -> TokenStream {
                         )*
 
                         pub fn and(self, filter: super::SQLFilter) -> Self {
-                            Self(wasmos::sql::Update {
+                            Self(riwaq::sql::Update {
                                 filter: Some(match self.0.filter {
                                     Some(ex_filter) => ex_filter.and(filter),
-                                    _ => wasmos::sql::FilterStmt::Filter(filter),
+                                    _ => riwaq::sql::FilterStmt::Filter(filter),
                                 }),
                                 ..self.0
                             })
@@ -403,13 +403,13 @@ pub fn table(attr: TokenStream, item: TokenStream) -> TokenStream {
                         where
                             VEC: IntoIterator<Item = super::SQLFilter>,
                         {
-                            Self(wasmos::sql::Update {
+                            Self(riwaq::sql::Update {
                                 filter: Some(match self.0.filter {
                                     Some(ex_filter) => ex_filter.and_all::<VEC>(filter),
-                                    _ => wasmos::sql::FilterStmt::And(
+                                    _ => riwaq::sql::FilterStmt::And(
                                         filter
                                             .into_iter()
-                                            .map(|item| wasmos::sql::FilterStmt::Filter(item))
+                                            .map(|item| riwaq::sql::FilterStmt::Filter(item))
                                             .collect(),
                                     ),
                                 }),
@@ -420,10 +420,10 @@ pub fn table(attr: TokenStream, item: TokenStream) -> TokenStream {
                             self.and(filter)
                         }
                         pub fn or(self, filter: super::SQLFilter) -> Self {
-                            Self(wasmos::sql::Update {
+                            Self(riwaq::sql::Update {
                                 filter: Some(match self.0.filter {
                                     Some(ex_filter) => ex_filter.or(filter),
-                                    _ => wasmos::sql::FilterStmt::Filter(filter),
+                                    _ => riwaq::sql::FilterStmt::Filter(filter),
                                 }),
                                 ..self.0
                             })
@@ -432,13 +432,13 @@ pub fn table(attr: TokenStream, item: TokenStream) -> TokenStream {
                         where
                             VEC: IntoIterator<Item = super::SQLFilter>,
                         {
-                            Self(wasmos::sql::Update {
+                            Self(riwaq::sql::Update {
                                 filter: Some(match self.0.filter {
                                     Some(ex_filter) => ex_filter.or_any::<VEC>(filter),
-                                    _ => wasmos::sql::FilterStmt::Or(
+                                    _ => riwaq::sql::FilterStmt::Or(
                                         filter
                                             .into_iter()
-                                            .map(|item| wasmos::sql::FilterStmt::Filter(item))
+                                            .map(|item| riwaq::sql::FilterStmt::Filter(item))
                                             .collect(),
                                     ),
                                 }),
@@ -447,17 +447,17 @@ pub fn table(attr: TokenStream, item: TokenStream) -> TokenStream {
                         }
 
                         pub async fn exec(&self) -> Result<i64, String> {
-                            let s = wasmos::serde_json::json!(self.0);
-                            wasmos::sql::sql_exec(s).await
+                            let s = riwaq::serde_json::json!(self.0);
+                            riwaq::sql::sql_exec(s).await
                         }
                     }
 
                     #(
                         pub fn #field_names(value: #field_types) -> Update {
-                            Update(wasmos::sql::Update {
+                            Update(riwaq::sql::Update {
                                 op: Some("Update".to_string()),
                                 tbl: #t_name.to_string(),
-                                values: std::collections::HashMap::from([(#field_names_str.to_string(), wasmos::serde_json::to_value(value).unwrap())]),
+                                values: std::collections::HashMap::from([(#field_names_str.to_string(), riwaq::serde_json::to_value(value).unwrap())]),
                                 filter: None
                             })
                         }
@@ -466,13 +466,13 @@ pub fn table(attr: TokenStream, item: TokenStream) -> TokenStream {
 
                 pub mod Delete {
 
-                    pub struct Delete(wasmos::sql::Delete<super::SQLFilter>);
+                    pub struct Delete(riwaq::sql::Delete<super::SQLFilter>);
                     impl Delete {
                         pub fn and(self, filter: super::SQLFilter) -> Self {
-                            Self(wasmos::sql::Delete {
+                            Self(riwaq::sql::Delete {
                                 filter: Some(match self.0.filter {
                                     Some(ex_filter) => ex_filter.and(filter),
-                                    _ => wasmos::sql::FilterStmt::Filter(filter),
+                                    _ => riwaq::sql::FilterStmt::Filter(filter),
                                 }),
                                 ..self.0
                             })
@@ -481,13 +481,13 @@ pub fn table(attr: TokenStream, item: TokenStream) -> TokenStream {
                         where
                             VEC: IntoIterator<Item = super::SQLFilter>,
                         {
-                            Self(wasmos::sql::Delete {
+                            Self(riwaq::sql::Delete {
                                 filter: Some(match self.0.filter {
                                     Some(ex_filter) => ex_filter.and_all::<VEC>(filter),
-                                    _ => wasmos::sql::FilterStmt::And(
+                                    _ => riwaq::sql::FilterStmt::And(
                                         filter
                                             .into_iter()
-                                            .map(|item| wasmos::sql::FilterStmt::Filter(item))
+                                            .map(|item| riwaq::sql::FilterStmt::Filter(item))
                                             .collect(),
                                     ),
                                 }),
@@ -498,13 +498,13 @@ pub fn table(attr: TokenStream, item: TokenStream) -> TokenStream {
                         where
                             VEC: IntoIterator<Item = super::SQLFilter>,
                         {
-                            Self(wasmos::sql::Delete {
+                            Self(riwaq::sql::Delete {
                                 filter: Some(match self.0.filter {
                                     Some(ex_filter) => ex_filter.or_any::<VEC>(filter),
-                                    _ => wasmos::sql::FilterStmt::Or(
+                                    _ => riwaq::sql::FilterStmt::Or(
                                         filter
                                             .into_iter()
-                                            .map(|item| wasmos::sql::FilterStmt::Filter(item))
+                                            .map(|item| riwaq::sql::FilterStmt::Filter(item))
                                             .collect(),
                                     ),
                                 }),
@@ -513,21 +513,21 @@ pub fn table(attr: TokenStream, item: TokenStream) -> TokenStream {
                         }
 
                         pub async fn exec(&self) -> Result<i64, String> {
-                            let s = wasmos::serde_json::json!(self.0);
-                            wasmos::sql::sql_exec(s).await
+                            let s = riwaq::serde_json::json!(self.0);
+                            riwaq::sql::sql_exec(s).await
                         }
                     }
 
                     pub fn where_(filter: super::SQLFilter) -> Delete {
-                        Delete(wasmos::sql::Delete {
+                        Delete(riwaq::sql::Delete {
                             op: Some("Delete".to_string()),
                             tbl: #t_name.to_string(),
-                            filter: Some(wasmos::sql::FilterStmt::Filter(filter))
+                            filter: Some(riwaq::sql::FilterStmt::Filter(filter))
                         })
                     }
 
                     pub fn all_rows() -> Delete {
-                        Delete(wasmos::sql::Delete {
+                        Delete(riwaq::sql::Delete {
                             op: Some("Delete".to_string()),
                             tbl: #t_name.to_string(),
                             filter: None

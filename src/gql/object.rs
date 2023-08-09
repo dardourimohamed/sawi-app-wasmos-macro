@@ -103,7 +103,7 @@ pub fn object(item: TokenStream) -> TokenStream {
 
     let metastruct = serde_json::to_string(&serde_json::Value::Object(ms)).unwrap();
     TokenStream::from(quote! {
-        impl wasmos::gql::ObjectMeta for #name {
+        impl riwaq::gql::ObjectMeta for #name {
             fn metastruct() -> String {
                 #(#rendered_ext)*
                 let mut metadata = #metastruct.to_string();

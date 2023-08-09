@@ -14,11 +14,11 @@ pub fn handler(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let input: ItemFn = parse_macro_input!(item);
     let name = input.sig.ident;
     let handler_name = Ident::new(
-        format!("wasmos_handler_{}", name).as_str(),
+        format!("riwaq_handler_{}", name).as_str(),
         Span::call_site(),
     );
     let metadata_name = Ident::new(
-        format!("wasmos_handler_metadata_{}", name).as_str(),
+        format!("riwaq_handler_metadata_{}", name).as_str(),
         Span::call_site(),
     );
     let body = input.block.stmts;
@@ -29,7 +29,7 @@ pub fn handler(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let res_metadata = match input.sig.output {
         syn::ReturnType::Default => quote! {()},
         syn::ReturnType::Type(_, res_ty) => {
-            quote! {wasmos::serde_json::from_str::<wasmos::serde_json::Value>(&#res_ty::metastruct()).unwrap()}
+            quote! {riwaq::serde_json::from_str::<riwaq::serde_json::Value>(&#res_ty::metastruct()).unwrap()}
         }
     };
 
@@ -50,7 +50,7 @@ pub fn handler(_attr: TokenStream, item: TokenStream) -> TokenStream {
                             syn::PathArguments::AngleBracketed(arg) => {
                                 match arg.args.first().unwrap() {
                                     syn::GenericArgument::Type(ty) => {
-                                        quote! {wasmos::serde_json::from_str::<wasmos::serde_json::Value>(&#ty::metastruct()).unwrap()}
+                                        quote! {riwaq::serde_json::from_str::<riwaq::serde_json::Value>(&#ty::metastruct()).unwrap()}
                                     }
                                     _ => panic!("The body Type should be a type"),
                                 }
@@ -81,7 +81,7 @@ pub fn handler(_attr: TokenStream, item: TokenStream) -> TokenStream {
             let ty = r.ty.clone();
             quote! {
                 let req_str = unsafe { std::ffi::CString::from_raw(ptr as _).into_string().unwrap() };
-                let #pat = wasmos::serde_json::from_str::<#ty>(req_str.as_str()).unwrap();
+                let #pat = riwaq::serde_json::from_str::<#ty>(req_str.as_str()).unwrap();
             }
         }
         None => quote!(),
@@ -90,7 +90,7 @@ pub fn handler(_attr: TokenStream, item: TokenStream) -> TokenStream {
     TokenStream::from(quote! {
         #[no_mangle]
         extern "C" fn #handler_name(ptr: *const u8) -> *const u8 {
-            wasmos::tokio::runtime::Builder::new_current_thread()
+            riwaq::tokio::runtime::Builder::new_current_thread()
                 .build()
                 .unwrap()
                 .block_on(async {
@@ -98,7 +98,7 @@ pub fn handler(_attr: TokenStream, item: TokenStream) -> TokenStream {
                     let res: #res_type = {
                         #(#body)*
                     };
-                    let mut res_str = wasmos::serde_json::to_string(&res).unwrap();
+                    let mut res_str = riwaq::serde_json::to_string(&res).unwrap();
                     res_str.push('\0');
                     res_str.as_ptr()
                 })
@@ -107,7 +107,7 @@ pub fn handler(_attr: TokenStream, item: TokenStream) -> TokenStream {
         extern "C" fn #metadata_name() -> *const u8 {
             let input = #req_metadata;
             let output = #res_metadata;
-            let mut res_str = wasmos::serde_json::to_string(&wasmos::serde_json::json!({
+            let mut res_str = riwaq::serde_json::to_string(&riwaq::serde_json::json!({
                 "input": input,
                 "output": output
             })).unwrap();
