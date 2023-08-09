@@ -28,42 +28,77 @@ pub fn select_from(attr: TokenStream, item: TokenStream) -> TokenStream {
         }
 
         #[derive(wasmos::serde::Serialize)]
-        pub struct #impl_id(wasmos::sql::Select<#table_p::Filter::SQLFilter>);
+        pub struct #impl_id(wasmos::sql::Select<#table_p::SQLFilter>);
         impl std::fmt::Debug for #impl_id {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 f.write_str(&format!("{}", self.0))
             }
         }
         impl #impl_id {
-            pub fn and(self, filter: #table_p::Filter::SQLFilter) -> Self {
-                let mut m = self;
-                m.0 = m.0.and(filter);
-                m
+            pub fn and(self, filter: #table_p::SQLFilter) -> Self {
+                Self (
+                    wasmos::sql::Select {
+                        filter: Some(match self.0.filter {
+                            Some(ex_filter) => ex_filter.and(filter),
+                            _ => wasmos::sql::FilterStmt::Filter(filter),
+                        }),
+                        ..self.0
+                    }
+                )
             }
             pub fn and_all<VEC>(self, filter: VEC) -> Self
             where
-                VEC: IntoIterator<Item = #table_p::Filter::SQLFilter>,
+                VEC: IntoIterator<Item = #table_p::SQLFilter>,
             {
-                let mut m = self;
-                m.0 = m.0.and_all::<VEC>(filter);
-                m
+                Self (
+                    wasmos::sql::Select {
+                        filter: Some(match self.0.filter {
+                            Some(ex_filter) => ex_filter.and_all::<VEC>(filter),
+                            _ => wasmos::sql::FilterStmt::And(
+                                filter
+                                    .into_iter()
+                                    .map(|item| wasmos::sql::FilterStmt::Filter(item))
+                                    .collect(),
+                            ),
+                        }),
+                        ..self.0
+                    }
+                )
             }
-            pub fn where_(self, filter: #table_p::Filter::SQLFilter) -> Self {
+            pub fn where_(self, filter: #table_p::SQLFilter) -> Self {
                 self.and(filter)
             }
-            pub fn or(self, filter: #table_p::Filter::SQLFilter) -> Self {
-                let mut m = self;
-                m.0 = m.0.or(filter);
-                m
+            pub fn or(self, filter: #table_p::SQLFilter) -> Self {
+                Self (
+                    wasmos::sql::Select {
+                        filter: Some(match self.0.filter {
+                            Some(ex_filter) => ex_filter.or(filter),
+                            _ => wasmos::sql::FilterStmt::Filter(filter),
+                        }),
+                        ..self.0
+                    }
+                )
             }
             pub fn or_any<VEC>(self, filter: VEC) -> Self
             where
-                VEC: IntoIterator<Item = #table_p::Filter::SQLFilter>,
+                VEC: IntoIterator<Item = #table_p::SQLFilter>,
             {
-                let mut m = self;
-                m.0 = m.0.or_any::<VEC>(filter);
-                m
+                Self (
+                    wasmos::sql::Select {
+                        filter: Some(match self.0.filter {
+                            Some(ex_filter) => ex_filter.or_any::<VEC>(filter),
+                            _ => wasmos::sql::FilterStmt::Or(
+                                filter
+                                    .into_iter()
+                                    .map(|item| wasmos::sql::FilterStmt::Filter(item))
+                                    .collect(),
+                            ),
+                        }),
+                        ..self.0
+                    }
+                )
             }
+
             pub async fn exec(&self) -> Result<Vec<#id>, String> {
                 wasmos::sql::sql_query(
                     wasmos::serde_json::to_value(&self).unwrap()
@@ -75,7 +110,7 @@ pub fn select_from(attr: TokenStream, item: TokenStream) -> TokenStream {
         impl #id {
             pub fn find() -> #impl_id {
                 #impl_id(wasmos::sql::Select {
-                    op: "select".to_string(),
+                    op: Some("Select".to_string()),
                     tbl: #table_p::T_NAME.to_string(),
                     cols: vec![#(#f_names.to_string() ,)*],
                     filter: None

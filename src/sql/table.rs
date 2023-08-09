@@ -276,92 +276,89 @@ pub fn table(attr: TokenStream, item: TokenStream) -> TokenStream {
                     #(pub #field_names: #field_types,)*
                 }
 
-                pub mod Filter {
+                #[derive(wasmos::serde::Serialize)]
+                pub struct SQLFilter(wasmos::sql::FilterItem);
+                impl wasmos::sql::SQLFilterTrait for SQLFilter {
+                    fn get_filter(&self) -> wasmos::sql::FilterItem {
+                        self.0.clone()
+                    }
+                }
 
-                    #[derive(wasmos::serde::Serialize)]
-                    pub struct SQLFilter(wasmos::sql::FilterItem);
-                    impl wasmos::sql::SQLFilterTrait for SQLFilter {
-                        fn get_filter(&self) -> wasmos::sql::FilterItem {
-                            self.0.clone()
+                #(
+                    pub mod #cols {
+                        pub fn eq(value: #field_types) -> super::SQLFilter {
+                            super::SQLFilter(wasmos::sql::FilterItem::Eq{
+                                col: #field_names_str.to_string(),
+                                value: wasmos::serde_json::to_value(value).unwrap()
+                            })
+                        }
+                        pub fn ne(value: #field_types) -> super::SQLFilter {
+                            super::SQLFilter(wasmos::sql::FilterItem::Ne{
+                                col: #field_names_str.to_string(),
+                                value: wasmos::serde_json::to_value(value).unwrap()
+                            })
+                        }
+                        pub fn in_<VEC>(values: VEC) -> super::SQLFilter where VEC: IntoIterator<Item = #field_types> {
+                            super::SQLFilter(wasmos::sql::FilterItem::In{
+                                col: #field_names_str.to_string(),
+                                values: values.into_iter().map(|v| wasmos::serde_json::to_value(v).unwrap()).collect::<Vec<wasmos::serde_json::Value>>()
+                            })
+                        }
+                        pub fn nin<VEC>(values: VEC) -> super::SQLFilter where VEC: IntoIterator<Item = #field_types> {
+                            super::SQLFilter(wasmos::sql::FilterItem::Nin{
+                                col: #field_names_str.to_string(),
+                                values: values.into_iter().map(|v| wasmos::serde_json::to_value(v).unwrap()).collect::<Vec<wasmos::serde_json::Value>>()
+                            })
+                        }
+                        pub fn gt(value: #field_types) -> super::SQLFilter {
+                            super::SQLFilter(wasmos::sql::FilterItem::Gt{
+                                col: #field_names_str.to_string(),
+                                value: wasmos::serde_json::to_value(value).unwrap()
+                            })
+                        }
+                        pub fn gte(value: #field_types) -> super::SQLFilter {
+                            super::SQLFilter(wasmos::sql::FilterItem::Gte{
+                                col: #field_names_str.to_string(),
+                                value: wasmos::serde_json::to_value(value).unwrap()
+                            })
+                        }
+                        pub fn lt(value: #field_types) -> super::SQLFilter {
+                            super::SQLFilter(wasmos::sql::FilterItem::Lt{
+                                col: #field_names_str.to_string(),
+                                value: wasmos::serde_json::to_value(value).unwrap()
+                            })
+                        }
+                        pub fn lte(value: #field_types) -> super::SQLFilter {
+                            super::SQLFilter(wasmos::sql::FilterItem::Lte{
+                                col: #field_names_str.to_string(),
+                                value: wasmos::serde_json::to_value(value).unwrap()
+                            })
+                        }
+                        pub fn between(start: #field_types, end: #field_types) -> super::SQLFilter {
+                            super::SQLFilter(wasmos::sql::FilterItem::Between{
+                                col: #field_names_str.to_string(),
+                                start: wasmos::serde_json::to_value(start).unwrap(),
+                                end: wasmos::serde_json::to_value(end).unwrap()
+                            })
+                        }
+                        pub fn like(expr: String) -> super::SQLFilter {
+                            super::SQLFilter(wasmos::sql::FilterItem::Like{
+                                col: #field_names_str.to_string(),
+                                expr: expr
+                            })
+                        }
+                        pub fn is_null() -> super::SQLFilter {
+                            super::SQLFilter(wasmos::sql::FilterItem::IsNull{
+                                col: #field_names_str.to_string()
+                            })
+                        }
+                        pub fn is_not_null() -> super::SQLFilter {
+                            super::SQLFilter(wasmos::sql::FilterItem::IsNotNull{
+                                col: #field_names_str.to_string()
+                            })
                         }
                     }
-
-                    #(
-                        pub mod #cols {
-                            pub fn eq(value: #field_types) -> super::SQLFilter {
-                                super::SQLFilter(wasmos::sql::FilterItem::Eq{
-                                    col: #field_names_str.to_string(),
-                                    value: wasmos::serde_json::to_value(value).unwrap()
-                                })
-                            }
-                            pub fn ne(value: #field_types) -> super::SQLFilter {
-                                super::SQLFilter(wasmos::sql::FilterItem::Ne{
-                                    col: #field_names_str.to_string(),
-                                    value: wasmos::serde_json::to_value(value).unwrap()
-                                })
-                            }
-                            pub fn in_<VEC>(values: VEC) -> super::SQLFilter where VEC: IntoIterator<Item = #field_types> {
-                                super::SQLFilter(wasmos::sql::FilterItem::In{
-                                    col: #field_names_str.to_string(),
-                                    values: values.into_iter().map(|v| wasmos::serde_json::to_value(v).unwrap()).collect::<Vec<wasmos::serde_json::Value>>()
-                                })
-                            }
-                            pub fn nin<VEC>(values: VEC) -> super::SQLFilter where VEC: IntoIterator<Item = #field_types> {
-                                super::SQLFilter(wasmos::sql::FilterItem::Nin{
-                                    col: #field_names_str.to_string(),
-                                    values: values.into_iter().map(|v| wasmos::serde_json::to_value(v).unwrap()).collect::<Vec<wasmos::serde_json::Value>>()
-                                })
-                            }
-                            pub fn gt(value: #field_types) -> super::SQLFilter {
-                                super::SQLFilter(wasmos::sql::FilterItem::Gt{
-                                    col: #field_names_str.to_string(),
-                                    value: wasmos::serde_json::to_value(value).unwrap()
-                                })
-                            }
-                            pub fn gte(value: #field_types) -> super::SQLFilter {
-                                super::SQLFilter(wasmos::sql::FilterItem::Gte{
-                                    col: #field_names_str.to_string(),
-                                    value: wasmos::serde_json::to_value(value).unwrap()
-                                })
-                            }
-                            pub fn lt(value: #field_types) -> super::SQLFilter {
-                                super::SQLFilter(wasmos::sql::FilterItem::Lt{
-                                    col: #field_names_str.to_string(),
-                                    value: wasmos::serde_json::to_value(value).unwrap()
-                                })
-                            }
-                            pub fn lte(value: #field_types) -> super::SQLFilter {
-                                super::SQLFilter(wasmos::sql::FilterItem::Lte{
-                                    col: #field_names_str.to_string(),
-                                    value: wasmos::serde_json::to_value(value).unwrap()
-                                })
-                            }
-                            pub fn between(start: #field_types, end: #field_types) -> super::SQLFilter {
-                                super::SQLFilter(wasmos::sql::FilterItem::Between{
-                                    col: #field_names_str.to_string(),
-                                    start: wasmos::serde_json::to_value(start).unwrap(),
-                                    end: wasmos::serde_json::to_value(end).unwrap()
-                                })
-                            }
-                            pub fn like(expr: String) -> super::SQLFilter {
-                                super::SQLFilter(wasmos::sql::FilterItem::Like{
-                                    col: #field_names_str.to_string(),
-                                    expr: expr
-                                })
-                            }
-                            pub fn is_null() -> super::SQLFilter {
-                                super::SQLFilter(wasmos::sql::FilterItem::IsNull{
-                                    col: #field_names_str.to_string()
-                                })
-                            }
-                            pub fn is_not_null() -> super::SQLFilter {
-                                super::SQLFilter(wasmos::sql::FilterItem::IsNotNull{
-                                    col: #field_names_str.to_string()
-                                })
-                            }
-                        }
-                    )*
-                }
+                )*
 
                 #[derive(wasmos::serde::Serialize)]
                 pub struct Insert {
@@ -370,7 +367,7 @@ pub fn table(attr: TokenStream, item: TokenStream) -> TokenStream {
                 impl Insert {
                     pub async fn exec(&self) {
                         let s = wasmos::serde_json::json!({
-                            "op": "insert".to_string(),
+                            "op": Some("Insert".to_string()),
                             "tbl": #t_name.to_string(),
                             "row": self
                         });
@@ -380,38 +377,89 @@ pub fn table(attr: TokenStream, item: TokenStream) -> TokenStream {
 
                 pub mod Update {
 
-                    #[derive(wasmos::serde::Serialize, Debug)]
-                    pub struct SQLFilter(wasmos::sql::FilterItem);
-                    impl wasmos::sql::SQLFilterTrait for SQLFilter {
-                        fn get_filter(&self) -> wasmos::sql::FilterItem {
-                            self.0.clone()
+                    pub struct Update(wasmos::sql::Update<super::SQLFilter>);
+                    impl Update {
+                        #(
+                            pub fn #field_names(self, value: #field_types) -> Update {
+                                let mut values = self.0.values;
+                                values.insert(#field_names_str.to_string(), wasmos::serde_json::to_value(value).unwrap());
+                                Update(wasmos::sql::Update {
+                                    values,
+                                    ..self.0
+                                })
+                            }
+                        )*
+
+                        pub fn and(self, filter: super::SQLFilter) -> Self {
+                            Self(wasmos::sql::Update {
+                                filter: Some(match self.0.filter {
+                                    Some(ex_filter) => ex_filter.and(filter),
+                                    _ => wasmos::sql::FilterStmt::Filter(filter),
+                                }),
+                                ..self.0
+                            })
+                        }
+                        pub fn and_all<VEC>(self, filter: VEC) -> Self
+                        where
+                            VEC: IntoIterator<Item = super::SQLFilter>,
+                        {
+                            Self(wasmos::sql::Update {
+                                filter: Some(match self.0.filter {
+                                    Some(ex_filter) => ex_filter.and_all::<VEC>(filter),
+                                    _ => wasmos::sql::FilterStmt::And(
+                                        filter
+                                            .into_iter()
+                                            .map(|item| wasmos::sql::FilterStmt::Filter(item))
+                                            .collect(),
+                                    ),
+                                }),
+                                ..self.0
+                            })
+                        }
+                        pub fn where_(self, filter: super::SQLFilter) -> Self {
+                            self.and(filter)
+                        }
+                        pub fn or(self, filter: super::SQLFilter) -> Self {
+                            Self(wasmos::sql::Update {
+                                filter: Some(match self.0.filter {
+                                    Some(ex_filter) => ex_filter.or(filter),
+                                    _ => wasmos::sql::FilterStmt::Filter(filter),
+                                }),
+                                ..self.0
+                            })
+                        }
+                        pub fn or_any<VEC>(self, filter: VEC) -> Self
+                        where
+                            VEC: IntoIterator<Item = super::SQLFilter>,
+                        {
+                            Self(wasmos::sql::Update {
+                                filter: Some(match self.0.filter {
+                                    Some(ex_filter) => ex_filter.or_any::<VEC>(filter),
+                                    _ => wasmos::sql::FilterStmt::Or(
+                                        filter
+                                            .into_iter()
+                                            .map(|item| wasmos::sql::FilterStmt::Filter(item))
+                                            .collect(),
+                                    ),
+                                }),
+                                ..self.0
+                            })
+                        }
+
+                        pub async fn exec(&self) {
+                            let s = wasmos::serde_json::json!(self.0);
+                            let _ = wasmos::sql::sql_exec(s).await;
                         }
                     }
 
-                    #[derive(Debug)]
-                    pub struct UpdateOperation {
-                        values: std::collections::HashMap<String, serde_json::Value>,
-                        filter: Option<wasmos::sql::FilterStmt<SQLFilter>>,
-                    }
-                    impl UpdateOperation {
-                        #(
-                            pub fn #field_names(self, value: #field_types) -> UpdateOperation {
-                                let mut values = self.values;
-                                values.insert(#field_names_str.to_string(), wasmos::serde_json::to_value(value).unwrap());
-                                UpdateOperation {
-                                    values,
-                                    filter: self.filter
-                                }
-                            }
-                        )*
-                    }
-
                     #(
-                        pub fn #field_names(value: #field_types) -> UpdateOperation {
-                            UpdateOperation {
+                        pub fn #field_names(value: #field_types) -> Update {
+                            Update(wasmos::sql::Update {
+                                op: Some("Update".to_string()),
+                                tbl: #t_name.to_string(),
                                 values: std::collections::HashMap::from([(#field_names_str.to_string(), wasmos::serde_json::to_value(value).unwrap())]),
                                 filter: None
-                            }
+                            })
                         }
                     )*
                 }
