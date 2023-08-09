@@ -366,10 +366,10 @@ pub fn table(attr: TokenStream, item: TokenStream) -> TokenStream {
                 }
                 impl Insert {
                     pub async fn exec(&self) {
-                        let s = wasmos::serde_json::json!({
-                            "op": Some("Insert".to_string()),
-                            "tbl": #t_name.to_string(),
-                            "row": self
+                        let s = wasmos::serde_json::json!(wasmos::sql::Insert {
+                            op: Some("Insert".to_string()),
+                            tbl: #t_name.to_string(),
+                            values: wasmos::serde_json::to_value(self).unwrap()
                         });
                         let _ = wasmos::sql::sql_exec(s).await;
                     }
