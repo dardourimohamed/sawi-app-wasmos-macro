@@ -365,13 +365,13 @@ pub fn table(attr: TokenStream, item: TokenStream) -> TokenStream {
                     #(pub #field_names: #field_types,)*
                 }
                 impl Insert {
-                    pub async fn exec(&self) {
+                    pub async fn exec(&self) -> Result<i64, String> {
                         let s = wasmos::serde_json::json!(wasmos::sql::Insert {
                             op: Some("Insert".to_string()),
                             tbl: #t_name.to_string(),
                             values: wasmos::serde_json::to_value(self).unwrap()
                         });
-                        let _ = wasmos::sql::sql_exec(s).await;
+                        wasmos::sql::sql_exec(s).await
                     }
                 }
 
@@ -446,9 +446,9 @@ pub fn table(attr: TokenStream, item: TokenStream) -> TokenStream {
                             })
                         }
 
-                        pub async fn exec(&self) {
+                        pub async fn exec(&self) -> Result<i64, String> {
                             let s = wasmos::serde_json::json!(self.0);
-                            let _ = wasmos::sql::sql_exec(s).await;
+                            wasmos::sql::sql_exec(s).await
                         }
                     }
 
@@ -512,9 +512,9 @@ pub fn table(attr: TokenStream, item: TokenStream) -> TokenStream {
                             })
                         }
 
-                        pub async fn exec(&self) {
+                        pub async fn exec(&self) -> Result<i64, String> {
                             let s = wasmos::serde_json::json!(self.0);
-                            let _ = wasmos::sql::sql_exec(s).await;
+                            wasmos::sql::sql_exec(s).await
                         }
                     }
 
