@@ -1,6 +1,6 @@
 [package]
 name = "riwaq-macro"
-version = "0.0.1"
+version = "0.1.0"
 description = "wasm runtime OS for web server"
 authors = ["Mohamed Dardouri <med@dardouri.com>"]
 edition = "2021"
@@ -18,4 +18,4 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
 field_types = "1.1.0"
 convert_case = "0.6"
-riwaq-types = { path = "../riwaq/types" }
+riwaq-types = "0.1.0"
